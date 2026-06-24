@@ -25,6 +25,14 @@ export async function POST(request: Request) {
       message: "Email confirmed. Sign in with the same email and password."
     });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Current status is CONFIRMED")) {
+      return NextResponse.json({
+        ok: true,
+        nextStep: "signIn",
+        message: "Email is already confirmed. Sign in with the same email and password."
+      });
+    }
+
     return NextResponse.json({ ok: false, ...authError(error) }, { status: 400 });
   }
 }

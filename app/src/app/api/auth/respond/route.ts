@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const result = await getCognitoClient().send(
       new RespondToAuthChallengeCommand({
         ClientId: cognitoClientId(),
-        ChallengeName: challengeName as "EMAIL_OTP" | "EMAIL_MFA",
+        ChallengeName: "EMAIL_OTP",
         Session: session,
         ChallengeResponses: {
           USERNAME: email,

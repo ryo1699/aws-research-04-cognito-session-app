@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     );
 
     if (result.ChallengeName) {
-      if (result.ChallengeName !== "EMAIL_OTP" && result.ChallengeName !== "EMAIL_MFA") {
+      if (result.ChallengeName !== "EMAIL_OTP") {
         return NextResponse.json(
           {
             ok: false,

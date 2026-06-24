@@ -16,8 +16,11 @@ export function cognitoClientId(): string {
   return requireEnv("COGNITO_CLIENT_ID");
 }
 
-export function challengeCodeParameter(challengeName: string): "EMAIL_OTP_CODE" | "EMAIL_MFA_CODE" {
-  return challengeName === "EMAIL_MFA" ? "EMAIL_MFA_CODE" : "EMAIL_OTP_CODE";
+export function challengeCodeParameter(challengeName: string): "EMAIL_OTP_CODE" {
+  if (challengeName !== "EMAIL_OTP") {
+    throw new Error(`Unsupported Cognito challenge: ${challengeName}`);
+  }
+  return "EMAIL_OTP_CODE";
 }
 
 export function authError(error: unknown): { message: string; code?: string } {
@@ -57,6 +60,4 @@ export function authenticatedResponse(auth: AuthenticationResultType, email?: st
       headers
     }
   );
-}
-  });
 }

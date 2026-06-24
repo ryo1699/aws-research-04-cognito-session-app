@@ -31,7 +31,6 @@ resource "aws_cognito_user_pool" "main" {
   auto_verified_attributes = ["email"]
   mfa_configuration        = "ON"
   user_pool_tier           = "ESSENTIALS"
-  enabled_mfas             = ["EMAIL_OTP"]
 
   account_recovery_setting {
     recovery_mechanism {

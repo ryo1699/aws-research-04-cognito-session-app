@@ -73,6 +73,16 @@ export default function Home() {
     });
   }
 
+  async function resendConfirmCode() {
+    await run(async () => {
+      const data = await requestJson<{ message?: string }>("/api/auth/resend", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      setMessage({ kind: "info", text: data.message ?? "確認コードを再送しました。" });
+    });
+  }
+
   async function signIn() {
     await run(async () => {
       const data = await requestJson<{
@@ -205,6 +215,9 @@ export default function Home() {
             </label>
             <button className="button secondary" disabled={loading} type="button" onClick={confirmSignUp}>
               メール確認
+            </button>
+            <button className="button secondary" disabled={loading} type="button" onClick={resendConfirmCode}>
+              確認コード再送
             </button>
           </div>
 
