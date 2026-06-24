@@ -1,0 +1,4 @@
+bucket  = "study-aws-4-terraform-state-ryo1699"
+key     = "aws-research-04-cognito-session-app/terraform.tfstate"
+region  = "ap-northeast-1"
+encrypt = true
