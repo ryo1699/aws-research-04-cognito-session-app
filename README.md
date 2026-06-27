@@ -4,6 +4,8 @@ Cognito で認証し、メールのワンタイムパスワードで 2 段階認
 
 セッションは Next.js の API route で暗号化し、HTTP-only Cookie に保存します。Cookie と Cognito access token / ID token / refresh token は 60 分にそろえ、アプリ側では refresh token を使わないため、60 分で自動ログアウトする設計です。
 
+認証フロー、token、Cookie、API Gateway JWT authorizer の挙動を詳しく学ぶ場合は [`AUTH_FLOW_README.md`](AUTH_FLOW_README.md) を参照します。
+
 ## フォルダ構成
 
 ```text
