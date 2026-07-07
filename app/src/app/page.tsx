@@ -175,7 +175,7 @@ export default function Home() {
           <div className="header">
             <p className="eyebrow">AWS Research 04</p>
             <h1>Cognito Session App</h1>
-            <p className="muted">Cognito メールOTP MFA と 60分 Cookie セッション</p>
+            <p className="muted">Cognito メールOTP MFA / access token 5分・refresh token 60分セッション</p>
           </div>
 
           <form className="stack" onSubmit={signUp}>

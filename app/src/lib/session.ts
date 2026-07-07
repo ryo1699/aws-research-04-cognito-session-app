@@ -9,6 +9,7 @@ const aad = Buffer.from("aws-research-04-cognito-session-app:v1");
 export type AppSession = {
   accessToken: string;
   idToken?: string;
+  refreshToken?: string;
   email?: string;
   username?: string;
   expiresAt: number;
@@ -28,13 +29,13 @@ export function sessionMaxAgeSeconds(): number {
   return optionalNumberEnv("SESSION_MAX_AGE_SECONDS", 3600);
 }
 
-export function makeSessionCookie(value: string): string {
+export function makeSessionCookie(value: string, maxAgeSeconds?: number): string {
   return serializeCookie(SESSION_COOKIE_NAME, value, {
     httpOnly: true,
     secure: secureCookie(),
     sameSite: "Lax",
     path: "/",
-    maxAge: sessionMaxAgeSeconds()
+    maxAge: maxAgeSeconds ?? sessionMaxAgeSeconds()
   });
 }
 
@@ -108,6 +109,7 @@ export function toPublicSession(session: AppSession | undefined): PublicSession 
 export function createAppSession(params: {
   accessToken: string;
   idToken?: string;
+  refreshToken?: string;
   expiresIn?: number;
   email?: string;
   username?: string;
@@ -115,17 +117,42 @@ export function createAppSession(params: {
   const now = Date.now();
   const tokenExpiresAt =
     params.expiresIn && params.expiresIn > 0 ? now + params.expiresIn * 1000 : jwtExpiresAt(params.accessToken);
-  const hardExpiresAt = now + sessionMaxAgeSeconds() * 1000;
-  const expiresAt = tokenExpiresAt ? Math.min(tokenExpiresAt, hardExpiresAt) : hardExpiresAt;
+  // セッション全体の寿命は refresh token の有効期限(SESSION_MAX_AGE_SECONDS = 60分)に紐づける。
+  // access token の期限(tokenExpiresAt, 約5分)はこれとは別に管理し、期限が来たら refresh で更新する。
+  const expiresAt = now + sessionMaxAgeSeconds() * 1000;
 
   return {
     accessToken: params.accessToken,
     idToken: params.idToken,
+    refreshToken: params.refreshToken,
     email: params.email ?? jwtClaim(params.idToken, "email") ?? jwtClaim(params.accessToken, "email"),
     username: params.username ?? jwtClaim(params.accessToken, "username"),
     expiresAt,
     tokenExpiresAt
   };
+}
+
+// refresh token で access token / id token を更新した結果を、既存セッションに反映する。
+// セッション全体の寿命(expiresAt)と refresh token は据え置き、access token 側だけを差し替える。
+export function refreshAppSession(
+  previous: AppSession,
+  params: { accessToken: string; idToken?: string; expiresIn?: number }
+): AppSession {
+  const now = Date.now();
+  const tokenExpiresAt =
+    params.expiresIn && params.expiresIn > 0 ? now + params.expiresIn * 1000 : jwtExpiresAt(params.accessToken);
+
+  return {
+    ...previous,
+    accessToken: params.accessToken,
+    idToken: params.idToken ?? previous.idToken,
+    tokenExpiresAt
+  };
+}
+
+// セッションの残り寿命(秒)。refresh 時に Cookie の Max-Age をセッション期限に合わせるために使う。
+export function sessionRemainingSeconds(session: AppSession): number {
+  return Math.max(0, Math.ceil((session.expiresAt - Date.now()) / 1000));
 }
 
 function encryptionKey(): Buffer {

@@ -1,5 +1,6 @@
 import {
   CognitoIdentityProviderClient,
+  InitiateAuthCommand,
   type AuthenticationResultType
 } from "@aws-sdk/client-cognito-identity-provider";
 import { requireEnv } from "@/lib/env";
@@ -23,6 +24,27 @@ export function challengeCodeParameter(challengeName: string): "EMAIL_OTP_CODE" 
   return "EMAIL_OTP_CODE";
 }
 
+// refresh token を使って access token / id token を再発行する。
+// REFRESH_TOKEN_AUTH は MFA challenge を再要求せず、期限内であれば直接トークンを返す。
+// refresh token 自体は(rotation 無効時)更新されず、初回ログインから 60 分で失効する。
+export async function refreshTokens(refreshToken: string): Promise<AuthenticationResultType> {
+  const result = await getCognitoClient().send(
+    new InitiateAuthCommand({
+      AuthFlow: "REFRESH_TOKEN_AUTH",
+      ClientId: cognitoClientId(),
+      AuthParameters: {
+        REFRESH_TOKEN: refreshToken
+      }
+    })
+  );
+
+  if (!result.AuthenticationResult?.AccessToken) {
+    throw new Error("Cognito did not return a refreshed access token.");
+  }
+
+  return result.AuthenticationResult;
+}
+
 export function authError(error: unknown): { message: string; code?: string } {
   if (error instanceof Error) {
     return { message: error.message, code: error.name };
@@ -38,6 +60,7 @@ export function authenticatedResponse(auth: AuthenticationResultType, email?: st
   const appSession = createAppSession({
     accessToken: auth.AccessToken,
     idToken: auth.IdToken,
+    refreshToken: auth.RefreshToken,
     expiresIn: auth.ExpiresIn,
     email
   });

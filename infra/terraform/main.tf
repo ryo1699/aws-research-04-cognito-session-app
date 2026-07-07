@@ -18,8 +18,8 @@ locals {
       status      = "ready"
     }
     item-003 = {
-      title       = "Sixty minute logout"
-      description = "Cognito token validity and the app cookie max-age are both configured for 60 minutes."
+      title       = "Five minute access token"
+      description = "The access token expires in 5 minutes and is refreshed with the 60 minute refresh token, so a stolen access token is usable for at most 5 minutes."
       status      = "ready"
     }
   }
@@ -85,8 +85,8 @@ resource "aws_cognito_user_pool_client" "web" {
   user_pool_id = aws_cognito_user_pool.main.id
 
   generate_secret                      = false
-  access_token_validity                = 60
-  id_token_validity                    = 60
+  access_token_validity                = 5
+  id_token_validity                    = 5
   refresh_token_validity               = 60
   prevent_user_existence_errors        = "ENABLED"
   enable_token_revocation              = true

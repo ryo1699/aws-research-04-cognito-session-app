@@ -5,13 +5,15 @@ app/.next/
 app/node_modules/
 app/.env.local
 app/npm-debug.log*
+app/tsconfig.tsbuildinfo
 
-# Terraform
-infra/terraform/.terraform/
+# Terraform（tfstate/.terraform はディレクトリを問わず除外する）
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
 infra/terraform/.terraform.lock.hcl
 infra/terraform/backend.hcl
 infra/terraform/terraform.tfvars
-infra/terraform/terraform.tfstate*
 infra/terraform/lambda/*.zip
 
 # Local outputs

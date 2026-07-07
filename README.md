@@ -2,7 +2,7 @@
 
 Cognito で認証し、メールのワンタイムパスワードで 2 段階認証を行い、認証済みユーザーだけが API Gateway 経由で DynamoDB のダミーデータを取得できるサンプルです。
 
-セッションは Next.js の API route で暗号化し、HTTP-only Cookie に保存します。Cookie と Cognito access token / ID token / refresh token は 60 分にそろえ、アプリ側では refresh token を使わないため、60 分で自動ログアウトする設計です。
+セッションは Next.js の API route で暗号化し、HTTP-only Cookie に保存します。Cognito access token / ID token は 5 分、refresh token は 60 分に設定し、access token が切れると Next.js が refresh token で自動更新します。これにより、access token が盗まれても最大 5 分しか使えない一方で、セッション自体は refresh token の寿命である 60 分まで維持され、60 分で自動ログアウトします。
 
 認証フロー、token、Cookie、API Gateway JWT authorizer の挙動を詳しく学ぶ場合は [`AUTH_FLOW_README.md`](AUTH_FLOW_README.md) を参照します。
 
@@ -252,7 +252,8 @@ npm run dev
 3. 「サインイン」を押し、メールに届いた OTP を入力して「OTP送信」を押す。
 4. 「DynamoDB取得」を押し、3 件のダミーデータと caller 情報が表示されることを確認する。
 5. ブラウザ DevTools で `cognito_session_app` Cookie が存在し、JavaScript から直接読めない HTTP-only Cookie になっていることを確認する。
-6. 60 分後、または Cookie 削除後に `DynamoDB取得` が 401 になり、再ログインが必要になることを確認する。
+6. 画面の「Access token期限」が約 5 分後、「Cookie期限」が約 60 分後になっていることを確認する。5 分以上経ってから `DynamoDB取得` を押しても成功するのは、Next.js が refresh token で access token を自動更新しているためである。
+7. 60 分後、または Cookie 削除後に `DynamoDB取得` が 401 になり、再ログインが必要になることを確認する。
 
 ### Cookie確認手順
 
@@ -345,7 +346,7 @@ API_URL=$(terraform -chdir=../infra/terraform output -raw api_endpoint)
 curl -i "${API_URL}/items" -H "Authorization: Bearer ${TOKEN}"
 ```
 
-token が有効なら `200`、60 分経過後なら `401` になります。
+token が有効なら `200`、access token の有効期限である 5 分を過ぎると `401` になります。これが「access token が盗まれても最大 5 分しか使えない」ことの確認です。画面上でその後 `DynamoDB取得` を押すと、Next.js が refresh token で access token を更新するため、セッションが切れる 60 分までは引き続きデータを取得できます。
 
 ## 完了と言える条件
 
@@ -358,10 +359,10 @@ token が有効なら `200`、60 分経過後なら `401` になります。
 
 ## token 設計メモ
 
-- `accessToken`: API Gateway JWT authorizer に送る。盗まれても最大 60 分で失効する。
-- `idToken`: 画面表示用のユーザー情報確認に使える。今回の API 認可には使わない。
-- `refreshToken`: Cognito client 側の有効期限も 60 分にする。アプリでは refresh 処理を実装せず、セッション延長を避ける。
-- Cookie: AES-256-GCM で暗号化し、HTTP-only / SameSite=Lax で保存する。ローカル開発では HTTP のため `SESSION_COOKIE_SECURE=false`、本番 HTTPS では `true` にする。
+- `accessToken`: API Gateway JWT authorizer に送る。有効期限は 5 分で、盗まれても最大 5 分で失効する。
+- `idToken`: 画面表示用のユーザー情報確認に使える。今回の API 認可には使わない。有効期限は access token と同じ 5 分。
+- `refreshToken`: Cognito client 側の有効期限は 60 分。暗号化 Cookie に一緒に保存し、access token が切れたら `/api/items` で `REFRESH_TOKEN_AUTH` を使って自動更新する。refresh token 自体は更新されないため、初回ログインから 60 分で失効し、そこでセッションが終わる。
+- Cookie: AES-256-GCM で暗号化し、HTTP-only / SameSite=Lax で保存する。ローカル開発では HTTP のため `SESSION_COOKIE_SECURE=false`、本番 HTTPS では `true` にする。セッション全体の寿命(`expiresAt`)は refresh token に合わせて 60 分とし、access token の期限(`tokenExpiresAt`, 5 分)とは別に管理する。
 
 ## 片付け
 
